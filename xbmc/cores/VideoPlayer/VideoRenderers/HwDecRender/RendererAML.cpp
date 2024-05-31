@@ -68,21 +68,20 @@ bool CRendererAML::Configure(const VideoPicture &picture, float fps, unsigned in
 
   // Configure GUI/OSD for HDR PQ when display is in HDR PQ mode
   bool device_support_dv(aml_support_dolby_vision());
-  bool user_dv_disable(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE) == DV_MODE_OFF);
+  bool user_dv_disable(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE) == 2);
   bool dv_is_used(device_support_dv && !user_dv_disable &&
     picture.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION);
   bool hdr_is_used((picture.hdrType == StreamHdrType::HDR_TYPE_HLG || picture.color_transfer == AVCOL_TRC_SMPTE2084) &&
     CServiceBroker::GetWinSystem()->IsHDRDisplay());
   
-  int vs10_sdr8_mode(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_SDR8));
-  bool vs10_sdr8_is_used(device_support_dv && !user_dv_disable && ((vs10_sdr8_mode < 3) && (picture.hdrType == StreamHdrType::HDR_TYPE_NONE)));
-  int vs10_sdr10_mode(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_SDR10));
-  bool vs10_sdr10_is_used(device_support_dv && !user_dv_disable && ((vs10_sdr10_mode < 3) && (picture.hdrType == StreamHdrType::HDR_TYPE_NONE)));
+  int vs10_sdr_mode(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_SDR));
+  bool vs10_is_used(device_support_dv && !user_dv_disable &&
+    ((vs10_sdr_mode < 3) && (picture.hdrType == StreamHdrType::HDR_TYPE_NONE)));
   
   CLog::Log(LOGDEBUG, "CRendererAML::Configure {}DV support, {}, DV system is {}, HDR is {}", device_support_dv ? "" : "no ",
     user_dv_disable ? "disabled" : "enabled", dv_is_used ? "enabled" : "disabled", hdr_is_used ? "used" : "not used");
 
-  CServiceBroker::GetWinSystem()->GetGfxContext().SetTransferPQ(dv_is_used | hdr_is_used | vs10_sdr8_is_used | vs10_sdr10_is_used) ;
+  CServiceBroker::GetWinSystem()->GetGfxContext().SetTransferPQ(dv_is_used | hdr_is_used | vs10_is_used) ;
 
   m_bConfigured = true;
 

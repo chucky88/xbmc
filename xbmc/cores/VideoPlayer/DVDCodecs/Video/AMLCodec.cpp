@@ -1975,8 +1975,8 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type, boo
     am_private->video_codec_type = codec_tag_to_vdec_type(am_private->video_codec_id);
 
   CLog::Log(LOGDEBUG, "CAMLCodec::OpenDecoder "
-    "hints.width({:d}), hints.height({:d}), hints.codec({:d}), hints.codec_tag({:d}), hints.bitdepth({:d})",
-    hints.width, hints.height, hints.codec, hints.codec_tag, hints.bitdepth);
+    "hints.width({:d}), hints.height({:d}), hints.codec({:d}), hints.codec_tag({:d})",
+    hints.width, hints.height, hints.codec, hints.codec_tag);
   CLog::Log(LOGDEBUG, "CAMLCodec::OpenDecoder hints.fpsrate({:d}), hints.fpsscale({:d}), video_rate({:d})",
     hints.fpsrate, hints.fpsscale, am_private->video_rate);
   CLog::Log(LOGDEBUG, "CAMLCodec::OpenDecoder hints.aspect({:f}), video_ratio.num({:d}), video_ratio.den({:d})",
@@ -2018,40 +2018,31 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type, boo
   enum DV_TYPE dv_type(static_cast<DV_TYPE>(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_TYPE)));
   bool content_is_dv(hints.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION);
 
-  // Get bit depth for SDR handling - if not 8 or 10, then will default to the SDR8 handling.
-  int bitdepth = hints.bitdepth;
-  if ((bitdepth != 8) && (bitdepth != 10)) bitdepth = 8;
-
-  unsigned int vs10_sdr8_mode((unsigned int)settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_SDR8));
-  unsigned int vs10_sdr10_mode((unsigned int)settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_SDR10));
+  unsigned int vs10_sdr_mode((unsigned int)settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_SDR));
   unsigned int vs10_hdr10_mode((unsigned int)settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_HDR10));
   unsigned int vs10_hdr10plus_mode((unsigned int)settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_HDR10PLUS));
   unsigned int vs10_hdrhlg_mode((unsigned int)settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_HDRHLG));
   unsigned int vs10_dv_mode((unsigned int)settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_DV));
 
-  bool vs10_sdr8_on((vs10_sdr8_mode < DOLBY_VISION_OUTPUT_MODE_BYPASS) && (hints.hdrType == StreamHdrType::HDR_TYPE_NONE) && (bitdepth == 8));
-  bool vs10_sdr10_on((vs10_sdr10_mode < DOLBY_VISION_OUTPUT_MODE_BYPASS) && (hints.hdrType == StreamHdrType::HDR_TYPE_NONE) && (bitdepth == 10));
+  bool vs10_sdr_on((vs10_sdr_mode < DOLBY_VISION_OUTPUT_MODE_BYPASS) && (hints.hdrType == StreamHdrType::HDR_TYPE_NONE));
   bool vs10_hdr10_on((vs10_hdr10_mode < DOLBY_VISION_OUTPUT_MODE_BYPASS) && (hints.hdrType == StreamHdrType::HDR_TYPE_HDR10) && !is_hdr10plus);
   bool vs10_hdr10plus_on((vs10_hdr10plus_mode < DOLBY_VISION_OUTPUT_MODE_BYPASS) && (hints.hdrType == StreamHdrType::HDR_TYPE_HDR10) && is_hdr10plus);
   bool vs10_hdrhlg_on((vs10_hdrhlg_mode < DOLBY_VISION_OUTPUT_MODE_BYPASS) && (hints.hdrType == StreamHdrType::HDR_TYPE_HLG));
   bool vs10_dv_on((vs10_dv_mode < DOLBY_VISION_OUTPUT_MODE_BYPASS) && content_is_dv);
-  bool dv_request(vs10_sdr8_on || vs10_sdr10_on || vs10_hdr10_on || vs10_hdr10plus_on || vs10_hdrhlg_on || content_is_dv);
+  bool dv_on(vs10_sdr_on || vs10_hdr10_on || vs10_hdr10plus_on || vs10_hdrhlg_on || content_is_dv);
 
-  // dv mode on or on demand and this is dv/vs10.
-  bool dv_on((dv_mode == DV_MODE_ON || dv_mode == DV_MODE_ON_DEMAND) && dv_request);
-  CLog::Log(LOGDEBUG, "CAMLCodec::OpenDecoder DV mode [{}],  DV type [{}], DV on [{}]", dv_mode, dv_type, dv_on);
-
-  // If DV Mode ON in Kodi Menu, then Set graphics max to 0 (auto - i.e. do lookup in AMLogic side) record current OSD max for Kodi menu to restore later.
-  if (dv_mode == DV_MODE_ON) m_dv_osd_max = aml_dv_set_osd_max(0);
+  // dv mode on or dv mode on demand and this is dv/vs10.
+  bool dv_enable((dv_mode == DV_MODE_ON) || ((dv_mode == DV_MODE_ON_DEMAND) && dv_on)) ;
+  CLog::Log(LOGDEBUG, "CAMLCodec::OpenDecoder DV mode [{}],  DV type [{}], DV enable [{}]", dv_mode, dv_type, dv_enable);
   
-  if (dv_on)
+  if (dv_enable)
   {
-    // For VS10 set the mode according to the user choice, otherwise if DV Content then set to IPT (Tunnel).
+    CLog::Log(LOGDEBUG, "CAMLCodec::OpenDecoder DV type [{}] enabled for [{}]", dv_type, content_is_dv ? "content" : "mapping");
+    
+    // For VS10 set the mode according to the user choice.
     unsigned int mode(DOLBY_VISION_OUTPUT_MODE_BYPASS);
-    if (vs10_sdr8_on) {
-      mode = vs10_sdr8_mode;
-    } else if (vs10_sdr10_on) {
-      mode = vs10_sdr10_mode;
+    if (vs10_sdr_on) {
+      mode = vs10_sdr_mode;
     } else if (vs10_hdr10_on) {
       mode = vs10_hdr10_mode;
     } else if (vs10_hdr10plus_on) {
@@ -2064,16 +2055,17 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type, boo
       mode = DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL;
     }
 
-    CLog::Log(LOGDEBUG, "CAMLCodec::OpenDecoder DV type [{}] VS10 mode [{}] enabled for [{}] ", dv_type, mode, content_is_dv ? "content" : "mapping");
-    aml_dv_on(mode);
+    CLog::Log(LOGDEBUG, "CAMLCodec::OpenDecoder VS10 mode:{} enabled", mode);
 
-    // For DV Content - enable DV now. (for VS10 enable later after codec setup)
+    aml_config_dv_on(mode);
+
     if (content_is_dv) {
       am_private->gcodec.dv_enable = 1;
-      aml_dv_enable(); // enable Dolby Vision
+      aml_config_dv_enable(true); // enable Dolby Vision
     }
 
-    if ((hints.dovi.dv_profile == 4 || hints.dovi.dv_profile == 7) && settings->GetInt(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI) == 0)
+    if ((hints.dovi.dv_profile == 4 || hints.dovi.dv_profile == 7) && CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+        CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI) == 0)
     {
       if (dovi_el_type != ELType::TYPE_MEL) // use stream path if not MEL
       {
@@ -2083,9 +2075,6 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type, boo
         am_private->gcodec.dec_mode  = STREAM_TYPE_STREAM;
       }
     }
-  } else if (aml_is_dv_enable()) {
-    // do not want DV, and it is on - then switch it off for this content.
-    aml_dv_off(true);
   }
 
   // DEC_CONTROL_FLAG_DISABLE_FAST_POC
@@ -2238,8 +2227,8 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type, boo
   SetSpeed(m_speed);
   SetPollDevice(am_private->vcodec.cntl_handle);
 
-  // For non-DV Content (i.e. VS10) - enable DV as final step after other codec setup - to avoid lockup issues.
-  if (!content_is_dv && dv_on) aml_dv_enable();
+  // Finally enable Dolby Vision after other codec setup - to avoid lockup issues.
+  if (!content_is_dv && dv_enable) aml_config_dv_enable(true);
 
   return true;
 }
@@ -2334,10 +2323,10 @@ void CAMLCodec::CloseDecoder()
 {
   CLog::Log(LOGDEBUG, "CAMLCodec::CloseDecoder");
 
-  const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
-  enum DV_MODE dv_mode(static_cast<DV_MODE>(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE)));
+	const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+	enum DV_MODE dv_mode(static_cast<DV_MODE>(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE)));
 
-  if ((dv_mode == DV_MODE_ON_DEMAND) && aml_is_dv_enable()) aml_dv_off(false);
+	if (dv_mode == DV_MODE_ON_DEMAND) aml_config_dv_off_1();
 
   SetPollDevice(-1);
 
@@ -2359,7 +2348,7 @@ void CAMLCodec::CloseDecoder()
   CSysfsPath("/sys/class/tsync/enable", 1);
 
   // disable Dolby Vision driver
-  if (aml_is_dv_enable())
+  if (aml_config_is_dv_enable())
   {
     CSysfsPath dv_video_on{"/sys/class/amdolby_vision/dv_video_on"};
     if (dv_video_on.Exists())
@@ -2368,18 +2357,19 @@ void CAMLCodec::CloseDecoder()
       while(dv_video_on.Get<int>().value() == 1 && (std::chrono::system_clock::now() - now) < std::chrono::seconds(m_decoder_timeout))
         usleep(10000); // wait 10ms
     }
-    if (dv_mode == DV_MODE_ON_DEMAND) aml_dv_disable();
+    if (dv_mode == DV_MODE_ON_DEMAND) aml_config_dv_enable(false);
   }
 
   ShowMainVideo(false);
 
   CloseAmlVideo();
 
-  // If DV Mode ON in Kodi Menu, then restore the DV osd max.
-  if (dv_mode == DV_MODE_ON) aml_dv_set_osd_max(m_dv_osd_max);
+  if (dv_mode == DV_MODE_ON_DEMAND) aml_config_dv_off_2();
 
-  // Switch on DV - Incase VS10 is off for the content type.
-  if ((dv_mode == DV_MODE_ON) && !aml_is_dv_enable()) aml_dv_on(DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL, true);
+	if (dv_mode == DV_MODE_ON) { // Incase VS10 is off for the content type.
+		aml_config_dv_on(DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL);
+		aml_config_dv_enable(true);
+  }
 }
 
 void CAMLCodec::CloseAmlVideo()

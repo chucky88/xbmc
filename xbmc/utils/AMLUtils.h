@@ -52,14 +52,7 @@ enum DV_TYPE : int
 {
   DV_TYPE_DISPLAY_LED = 0,
   DV_TYPE_PLAYER_LED_LLDV,
-  DV_TYPE_PLAYER_LED_HDR,
-  DV_TYPE_VS10_ONLY
-};
-
-enum DV_COLORIMETRY : int
-{
-  DV_COLORIMETRY_BT2020NC = 1,
-  DV_COLORIMETRY_REMOVE
+  DV_TYPE_PLAYER_LED_HDR
 };
 
 #define AML_GXBB    0x1F
@@ -70,8 +63,6 @@ enum DV_COLORIMETRY : int
 #define AML_SM1     0x2B
 
 int  aml_get_cpufamily_id();
-bool aml_display_support_hdr_pq();
-bool aml_display_support_hdr_hlg();
 bool aml_display_support_dv();
 bool aml_dv_support_ll();
 bool aml_dv_support_std();
@@ -85,14 +76,11 @@ bool aml_support_vp9();
 bool aml_support_av1();
 bool aml_support_dolby_vision();
 bool aml_dolby_vision_enabled();
-void aml_dv_on(unsigned int mode, bool enable = false);
-void aml_dv_off(bool disable = false);
-int aml_dv_set_osd_max(int max);
-void aml_dv_enable();
-void aml_dv_disable();
-bool aml_is_dv_enable();
-void aml_dv_display_trigger();
-void aml_dv_start();
+void aml_config_dv_on(unsigned int mode);
+void aml_config_dv_off_1();
+void aml_config_dv_off_2();
+void aml_config_dv_enable(bool enable);
+bool aml_config_is_dv_enable();
 bool aml_has_frac_rate_policy();
 bool aml_video_started();
 void aml_video_mute(bool mute);
