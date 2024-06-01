@@ -258,11 +258,17 @@ bool aml_dolby_vision_enabled()
   return ((dv_enabled && !!dv_user_enabled) == 1);
 }
 
-void aml_config_dv_on(unsigned int mode)
+void aml_dv_on(unsigned int mode, bool enable)
 {
 	const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
-
 	enum DV_TYPE dv_type(static_cast<DV_TYPE>(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_TYPE)));
+
+  // Set the VSVDB parameters as set by the user.
+  bool dv_dolby_vsvdb_inject(settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_VSVDB_INJECT));
+  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_dolby_vsvdb_inject", dv_dolby_vsvdb_inject ? 1 : 0);
+  
+  std::string dv_dolby_vsvdb_payload(settings->GetString(CSettings::SETTING_COREELEC_AMLOGIC_DV_VSVDB));
+  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_dolby_vsvdb_payload", dv_dolby_vsvdb_payload);
 
   // force player led mode when enabled
   CSysfsPath dolby_vision_flags{"/sys/module/amdolby_vision/parameters/dolby_vision_flags"};
@@ -270,18 +276,12 @@ void aml_config_dv_on(unsigned int mode)
 	
   if (dolby_vision_flags.Exists() && dolby_vision_ll_policy.Exists())
   {
-    // Set the VSVDB parameters as set by the user.
-    bool dv_dolby_vsvdb_inject(settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_VSVDB_INJECT));
-    CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_dolby_vsvdb_inject", dv_dolby_vsvdb_inject ? 1 : 0);
-    
-    std::string dv_dolby_vsvdb_payload(settings->GetString(CSettings::SETTING_COREELEC_AMLOGIC_DV_VSVDB));
-    CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_dolby_vsvdb_payload", dv_dolby_vsvdb_payload);
-
     if (dv_type == DV_TYPE_PLAYER_LED_LLDV || dv_type == DV_TYPE_PLAYER_LED_HDR) // Player Led (DV-LL and HDR)
     {
       dolby_vision_flags.Set(dolby_vision_flags.Get<unsigned int>().value() | FLAG_FORCE_DV_LL);
       dolby_vision_ll_policy.Set(DOLBY_VISION_LL_YUV422);
-      CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_hdr_for_lldv", (dv_type == 2)  ? 'Y' : 'N'); 
+      // Set the HDR for LLDV if DV_TYPE_PLAYER_LED_HDR.
+      CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_hdr_for_lldv", (dv_type == DV_TYPE_PLAYER_LED_HDR) ? 'Y' : 'N'); 
     }
     else // Display Led (DV-Std)
     {
@@ -297,31 +297,45 @@ void aml_config_dv_on(unsigned int mode)
 	if ((mode == DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL) && (dv_type != DV_TYPE_DISPLAY_LED)) 
     mode = DOLBY_VISION_OUTPUT_MODE_IPT;
 
-  CSysfsPath("/sys/module/amdolby_vision/parameters/force_update_reg", 31);
 	CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_mode", mode);
   CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_policy", DOLBY_VISION_FORCE_OUTPUT_MODE);
+
+  if (enable) aml_dv_enable();
 }
 
-void aml_config_dv_off_1()
+void aml_dv_off(bool disable)
 {
-	// Reset DV Paremters before turning off - will do mode change first.
+  // Reset DV Paremters - will do mode change.
+  CSysfsPath("/sys/class/amdolby_vision/debug", "enable_fel 0");
   CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_mode", DOLBY_VISION_OUTPUT_MODE_BYPASS);
   CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_policy", DOLBY_VISION_FOLLOW_SOURCE);
+  
+  // If diable wait for mode change and then disable.
+  if (disable) {
+    CSysfsPath dolby_vision_target_mode{"/sys/module/amdolby_vision/parameters/dolby_vision_target_mode"};
+    if (dolby_vision_target_mode.Exists())
+    {
+      std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
+      while(dolby_vision_target_mode.Get<unsigned int>().value() != DOLBY_VISION_OUTPUT_MODE_BYPASS && 
+            (std::chrono::system_clock::now() - now) < std::chrono::seconds(3))
+        usleep(10000); // wait 10ms
+    }
+    usleep(400000); // TODO: is there a better way? - currently wait 400ms to make sure it has switched over before switching off - even after waiting for target mode.
+    aml_dv_disable();
+  }
 }
 
-void aml_config_dv_off_2()
+void aml_dv_enable()
 {
-	// Reset DV parameters after turning off and all closed.
-  CSysfsPath("/sys/class/amdolby_vision/debug", "enable_fel 0");
-  CSysfsPath("/sys/module/amdolby_vision/parameters/force_update_reg", 0);
+  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_enable", "Y");
 }
 
-void aml_config_dv_enable(bool enable)
+void aml_dv_disable()
 {
-  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_enable", enable ? "Y" : "N");
+  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_enable", "N");
 }
 
-bool aml_config_is_dv_enable()
+bool aml_is_dv_enable()
 {
   CSysfsPath dolby_vision_enable{"/sys/module/amdolby_vision/parameters/dolby_vision_enable"};
   return (dolby_vision_enable.Exists() && StringUtils::EqualsNoCase(dolby_vision_enable.Get<std::string>().value(), "Y"));

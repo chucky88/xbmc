@@ -24615,12 +24615,6 @@ msgstr ""
 
 #. "Dolby Vision"
 #: system/settings/settings.xml
-msgctxt "#50002"
-msgid "Dolby Vision VS10"
-msgstr ""
-
-#. "Dolby Vision"
-#: system/settings/settings.xml
 msgctxt "#50011"
 msgid "Mode"
 msgstr ""

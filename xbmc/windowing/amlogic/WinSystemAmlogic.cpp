@@ -132,28 +132,26 @@ bool CWinSystemAmlogic::InitWindowSystem()
     if (!support) settings->SetString(id, value);
   };
 
-  setInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_TYPE, device_support_dv, DV_MODE_OFF);
+  setInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE, device_support_dv, DV_MODE_OFF);
   setInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_TYPE, device_support_dv, DV_TYPE_PLAYER_LED_HDR);
   setBln(CSettings::SETTING_COREELEC_AMLOGIC_DV_VSVDB_INJECT, device_support_dv, false);
   setStr(CSettings::SETTING_COREELEC_AMLOGIC_DV_VSVDB, device_support_dv, "");
   setInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_COLORIMETRY_FOR_STD, all_support_dv, 0);
-  setInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_SDR, device_support_dv, DOLBY_VISION_OUTPUT_MODE_BYPASS);
-  setInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_HDR10, device_support_dv, DOLBY_VISION_OUTPUT_MODE_BYPASS);
-  setInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_HDR10PLUS, device_support_dv, DOLBY_VISION_OUTPUT_MODE_BYPASS);
-  setInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_HDRHLG, device_support_dv, DOLBY_VISION_OUTPUT_MODE_BYPASS);
-  setInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_DV, device_support_dv, DOLBY_VISION_OUTPUT_MODE_BYPASS);
+  setInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_SDR, device_support_dv, static_cast<int>(DOLBY_VISION_OUTPUT_MODE_BYPASS));
+  setInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_HDR10, device_support_dv, static_cast<int>(DOLBY_VISION_OUTPUT_MODE_BYPASS));
+  setInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_HDR10PLUS, device_support_dv, static_cast<int>(DOLBY_VISION_OUTPUT_MODE_BYPASS));
+  setInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_HDRHLG, device_support_dv, static_cast<int>(DOLBY_VISION_OUTPUT_MODE_BYPASS));
+  setInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_DV, device_support_dv, static_cast<int>(DOLBY_VISION_OUTPUT_MODE_BYPASS));
 
+  CSysfsPath("/sys/module/amdolby_vision/parameters/force_update_reg", 31);
   CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_graphic_max", 100);
 
   // Turn on dv - if dv mode is on.
   enum DV_MODE dv_mode(static_cast<DV_MODE>(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE)));
   if (dv_mode == DV_MODE_ON ) {
-    aml_config_dv_on(DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL);
-		aml_config_dv_enable(true);
-  } else {
-    aml_config_dv_off_1();
-    aml_config_dv_enable(false);
-    aml_config_dv_off_2();
+    aml_dv_on(DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL, true);
+  } else if (aml_is_dv_enable()) {
+    aml_dv_off(true);
   }
 
   if (((LINUX_VERSION_CODE >> 16) & 0xFF) < 5)
@@ -204,6 +202,8 @@ bool CWinSystemAmlogic::CreateNewWindow(const std::string& name,
                                     bool fullScreen,
                                     RESOLUTION_INFO& res)
 {
+  CLog::Log(LOGINFO, "testa1 create window [%s] [%d]", name, fullScreen);
+
   m_nWidth        = res.iWidth;
   m_nHeight       = res.iHeight;
   m_fRefreshRate  = res.fRefreshRate;
@@ -249,6 +249,7 @@ bool CWinSystemAmlogic::CreateNewWindow(const std::string& name,
 
 bool CWinSystemAmlogic::DestroyWindow()
 {
+  CLog::Log(LOGINFO, "testa1 destroy window");
   if (m_nativeWindow != NULL)
   {
     delete(m_nativeWindow);
@@ -373,23 +374,27 @@ float CWinSystemAmlogic::GetGuiSdrPeakLuminance() const
 
 bool CWinSystemAmlogic::Hide()
 {
+  CLog::Log(LOGINFO, "testa1 hide");
   return false;
 }
 
 bool CWinSystemAmlogic::Show(bool show)
 {
+  CLog::Log(LOGINFO, "testa1 show {:d}", show);
   CSysfsPath("/sys/class/graphics/" + m_framebuffer_name + "/blank", (show ? 0 : 1));
   return true;
 }
 
 void CWinSystemAmlogic::Register(IDispResource *resource)
 {
+  CLog::Log(LOGINFO, "testa1 register");
   std::unique_lock<CCriticalSection> lock(m_resourceSection);
   m_resources.push_back(resource);
 }
 
 void CWinSystemAmlogic::Unregister(IDispResource *resource)
 {
+  CLog::Log(LOGINFO, "testa1 unregister");
   std::unique_lock<CCriticalSection> lock(m_resourceSection);
   std::vector<IDispResource*>::iterator i = find(m_resources.begin(), m_resources.end(), resource);
   if (i != m_resources.end())
