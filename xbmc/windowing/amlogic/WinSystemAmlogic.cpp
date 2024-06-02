@@ -31,6 +31,7 @@
 #include "utils/AMLUtils.h"
 #include "utils/log.h"
 #include "threads/SingleLock.h"
+#include "interfaces/AnnouncementManager.h"
 
 #include "platform/linux/SysfsPath.h"
 
@@ -190,7 +191,28 @@ bool CWinSystemAmlogic::InitWindowSystem()
   CLog::Log(LOGDEBUG,"CWinSystemAmlogic: Sending SIGUSR1 to 'splash-image'");
   std::system("killall -s SIGUSR1 splash-image &> /dev/null");
 
+  // register for announcements to capture OnWake and re-apply DV if needed.
+  auto announcer = CServiceBroker::GetAnnouncementManager();
+  announcer->AddAnnouncer(this);
+
   return CWinSystemBase::InitWindowSystem();
+}
+
+void CWinSystemAmlogic::Announce(ANNOUNCEMENT::AnnouncementFlag flag,
+              const std::string& sender,
+              const std::string& message,
+              const CVariant& data)
+{
+    if ((flag == ANNOUNCEMENT::System) && (message == "OnWake"))
+    {
+      // When Wake from Suspend re-trigger DV if in DV_MODE_ON
+      const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+      enum DV_MODE dv_mode(static_cast<DV_MODE>(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE)));
+      if (dv_mode == DV_MODE_ON) {
+        aml_dv_off(true);
+        aml_dv_on(DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL, true);
+      }
+    }
 }
 
 bool CWinSystemAmlogic::DestroyWindowSystem()

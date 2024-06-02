@@ -18,7 +18,8 @@
 
 class IDispResource;
 
-class CWinSystemAmlogic : public CWinSystemBase
+class CWinSystemAmlogic : public CWinSystemBase,
+                          public ANNOUNCEMENT::IAnnouncer // Application callback
 {
 public:
   CWinSystemAmlogic();
@@ -40,6 +41,13 @@ public:
   bool Show(bool show = true) override;
   virtual void Register(IDispResource *resource);
   virtual void Unregister(IDispResource *resource);
+
+  // implementation of IAnnouncer
+  void Announce(ANNOUNCEMENT::AnnouncementFlag flag,
+                const std::string& sender,
+                const std::string& message,
+                const CVariant& data) override;
+
 protected:
   std::string m_framebuffer_name;
   EGLDisplay m_nativeDisplay;
