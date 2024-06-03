@@ -144,8 +144,13 @@ bool CWinSystemAmlogic::InitWindowSystem()
   setInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_HDRHLG, device_support_dv, static_cast<int>(DOLBY_VISION_OUTPUT_MODE_BYPASS));
   setInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_VS10_DV, device_support_dv, static_cast<int>(DOLBY_VISION_OUTPUT_MODE_BYPASS));
 
+  // Always update (reset) the reg and lut on mode changes.
   CSysfsPath("/sys/module/amdolby_vision/parameters/force_update_reg", 31);
-  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_graphic_max", 100);
+
+  // Limit the luminance of graphical elements as menu now can be in DV/HDR.
+  CSysfsPath dolby_vision_graphic_max{"/sys/module/amdolby_vision/parameters/dolby_vision_graphic_max"};
+  if (dolby_vision_graphic_max.Exists() && (dolby_vision_graphic_max.Get<unsigned int>().value() == 0))
+    dolby_vision_graphic_max.Set(100);
 
   // Turn on dv - if dv mode is on 
   enum DV_MODE dv_mode(static_cast<DV_MODE>(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE)));
