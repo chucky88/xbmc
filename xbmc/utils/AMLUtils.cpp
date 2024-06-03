@@ -263,12 +263,20 @@ void aml_dv_on(unsigned int mode, bool enable)
 	const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
 	enum DV_TYPE dv_type(static_cast<DV_TYPE>(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_TYPE)));
 
-  // Set the VSVDB parameters as set by the user.
+  // Set the Dolby VSVDB parameter to latest value from user.
   bool dv_dolby_vsvdb_inject(settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_VSVDB_INJECT));
   CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_dolby_vsvdb_inject", dv_dolby_vsvdb_inject ? 1 : 0);
   
   std::string dv_dolby_vsvdb_payload(settings->GetString(CSettings::SETTING_COREELEC_AMLOGIC_DV_VSVDB));
   CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_dolby_vsvdb_payload", dv_dolby_vsvdb_payload);
+
+  // Set the Colorimetery to latest value from user.
+  int colorimetry(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_COLORIMETRY_FOR_STD));
+  CSysfsPath("/sys/module/hdmitx20/parameters/dovi_tv_led_bt2020", (colorimetry == DV_COLORIMETRY_BT2020NC) ? 'Y' : 'N');
+  CSysfsPath("/sys/module/hdmitx20/parameters/dovi_tv_led_no_colorimetry", (colorimetry == DV_COLORIMETRY_REMOVE) ? 'Y' : 'N');
+
+  // Set the HDR for LLDV if DV_TYPE_PLAYER_LED_HDR.
+  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_hdr_for_lldv", (dv_type == DV_TYPE_PLAYER_LED_HDR) ? 'Y' : 'N'); 
 
   // force player led mode when enabled
   CSysfsPath dolby_vision_flags{"/sys/module/amdolby_vision/parameters/dolby_vision_flags"};
@@ -276,24 +284,19 @@ void aml_dv_on(unsigned int mode, bool enable)
 	
   if (dolby_vision_flags.Exists() && dolby_vision_ll_policy.Exists())
   {
-    if (dv_type == DV_TYPE_PLAYER_LED_LLDV || dv_type == DV_TYPE_PLAYER_LED_HDR) // Player Led (DV-LL and HDR)
-    {
-      dolby_vision_flags.Set(dolby_vision_flags.Get<unsigned int>().value() | FLAG_FORCE_DV_LL);
-      dolby_vision_ll_policy.Set(DOLBY_VISION_LL_YUV422);
-      // Set the HDR for LLDV if DV_TYPE_PLAYER_LED_HDR.
-      CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_hdr_for_lldv", (dv_type == DV_TYPE_PLAYER_LED_HDR) ? 'Y' : 'N'); 
-    }
-    else // Display Led (DV-Std)
+    if (dv_type == DV_TYPE_DISPLAY_LED) // Display Led (DV-Std)
     {
       dolby_vision_flags.Set(dolby_vision_flags.Get<unsigned int>().value() & ~(FLAG_FORCE_DV_LL));
       dolby_vision_ll_policy.Set(DOLBY_VISION_LL_DISABLE);
-      // Set the Colorimetery as set up the user.
-      int colorimetry(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_COLORIMETRY_FOR_STD));
-      CSysfsPath("/sys/module/hdmitx20/parameters/dovi_tv_led_bt2020", (colorimetry == 1) ? 'Y' : 'N');
-      CSysfsPath("/sys/module/hdmitx20/parameters/dovi_tv_led_no_colorimetry", (colorimetry == 2) ? 'Y' : 'N');
+    }
+    else // Player Led (DV-LL and HDR)
+    {
+      dolby_vision_flags.Set(dolby_vision_flags.Get<unsigned int>().value() | FLAG_FORCE_DV_LL);
+      dolby_vision_ll_policy.Set(DOLBY_VISION_LL_YUV422);
     }
   }
 
+  // Convert to non tunnel if not DV_TYPE_DISPLAY_LED.
 	if ((mode == DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL) && (dv_type != DV_TYPE_DISPLAY_LED)) 
     mode = DOLBY_VISION_OUTPUT_MODE_IPT;
 
@@ -339,6 +342,14 @@ bool aml_is_dv_enable()
 {
   CSysfsPath dolby_vision_enable{"/sys/module/amdolby_vision/parameters/dolby_vision_enable"};
   return (dolby_vision_enable.Exists() && StringUtils::EqualsNoCase(dolby_vision_enable.Get<std::string>().value(), "Y"));
+}
+
+void aml_dv_display_trigger()
+{
+  if (aml_is_dv_enable()) {
+    CSysfsPath display_mode{"/sys/class/display/mode"};
+    if (display_mode.Exists()) display_mode.Set(display_mode.Get<std::string>().value());
+  }
 }
 
 bool aml_has_frac_rate_policy()

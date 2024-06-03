@@ -55,6 +55,12 @@ enum DV_TYPE : int
   DV_TYPE_PLAYER_LED_HDR
 };
 
+enum DV_COLORIMETRY : int
+{
+  DV_COLORIMETRY_BT2020NC = 1,
+  DV_COLORIMETRY_REMOVE
+};
+
 #define AML_GXBB    0x1F
 #define AML_GXL     0x21
 #define AML_GXM     0x22
@@ -81,6 +87,7 @@ void aml_dv_off(bool disable = false);
 void aml_dv_enable();
 void aml_dv_disable();
 bool aml_is_dv_enable();
+void aml_dv_display_trigger();
 bool aml_has_frac_rate_policy();
 bool aml_video_started();
 void aml_video_mute(bool mute);
