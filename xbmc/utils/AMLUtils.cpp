@@ -260,13 +260,13 @@ bool aml_dolby_vision_enabled()
 
 void aml_dv_on(unsigned int mode, bool enable)
 {
-	const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
-	enum DV_TYPE dv_type(static_cast<DV_TYPE>(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_TYPE)));
+  const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+  enum DV_TYPE dv_type(static_cast<DV_TYPE>(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_TYPE)));
 
   // Set the Dolby VSVDB parameter to latest value from user.
   bool dv_dolby_vsvdb_inject(settings->GetBool(CSettings::SETTING_COREELEC_AMLOGIC_DV_VSVDB_INJECT));
   CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_dolby_vsvdb_inject", dv_dolby_vsvdb_inject ? 1 : 0);
-  
+
   std::string dv_dolby_vsvdb_payload(settings->GetString(CSettings::SETTING_COREELEC_AMLOGIC_DV_VSVDB));
   CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_dolby_vsvdb_payload", dv_dolby_vsvdb_payload);
 
@@ -281,7 +281,7 @@ void aml_dv_on(unsigned int mode, bool enable)
   // force player led mode when enabled
   CSysfsPath dolby_vision_flags{"/sys/module/amdolby_vision/parameters/dolby_vision_flags"};
   CSysfsPath dolby_vision_ll_policy{"/sys/module/amdolby_vision/parameters/dolby_vision_ll_policy"};
-	
+
   if (dolby_vision_flags.Exists() && dolby_vision_ll_policy.Exists())
   {
     if (dv_type == DV_TYPE_DISPLAY_LED) // Display Led (DV-Std)

@@ -147,7 +147,7 @@ bool CWinSystemAmlogic::InitWindowSystem()
   // Always update (reset) the reg and lut on mode changes.
   CSysfsPath("/sys/module/amdolby_vision/parameters/force_update_reg", 31);
 
-  // Limit the luminance of graphical elements as menu now can be in DV/HDR.
+  // Limit the luminance of graphical elements as menu now can be in DV/HDR - do not set if set by user.
   CSysfsPath dolby_vision_graphic_max{"/sys/module/amdolby_vision/parameters/dolby_vision_graphic_max"};
   if (dolby_vision_graphic_max.Exists() && (dolby_vision_graphic_max.Get<unsigned int>().value() == 0))
     dolby_vision_graphic_max.Set(100);
@@ -204,8 +204,7 @@ void CWinSystemAmlogic::Announce(ANNOUNCEMENT::AnnouncementFlag flag,
               const CVariant& data)
 {
   // When Wake from Suspend re-trigger DV if in DV_MODE_ON
-  if ((flag == ANNOUNCEMENT::System) && (message == "OnWake"))
-    aml_dv_start();
+  if ((flag == ANNOUNCEMENT::System) && (message == "OnWake")) aml_dv_start();
 }
 
 bool CWinSystemAmlogic::DestroyWindowSystem()

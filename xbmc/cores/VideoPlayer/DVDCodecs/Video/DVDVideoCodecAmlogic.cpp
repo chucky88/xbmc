@@ -305,7 +305,7 @@ bool CDVDVideoCodecAmlogic::Open(CDVDStreamInfo &hints, CDVDCodecOptions &option
         if (m_bitstream && aml_support_dolby_vision())
         {
           auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
-          bool user_dv_disable = (settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE) == 2);
+          bool user_dv_disable = (settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE) == DV_MODE_OFF);
           if (!user_dv_disable)
           {
             int convertDovi = settings->GetInt(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI);

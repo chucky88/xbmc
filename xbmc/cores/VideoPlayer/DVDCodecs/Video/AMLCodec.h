@@ -141,5 +141,5 @@ private:
   bool            m_buffer_level_ready;
   float           m_minimum_buffer_level;
 
-  int							m_dv_graphic_max;
+  unsigned int    m_dv_graphic_max;
 };

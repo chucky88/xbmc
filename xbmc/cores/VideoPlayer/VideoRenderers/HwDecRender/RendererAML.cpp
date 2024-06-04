@@ -68,7 +68,7 @@ bool CRendererAML::Configure(const VideoPicture &picture, float fps, unsigned in
 
   // Configure GUI/OSD for HDR PQ when display is in HDR PQ mode
   bool device_support_dv(aml_support_dolby_vision());
-  bool user_dv_disable(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE) == 2);
+  bool user_dv_disable(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE) == DV_MODE_OFF);
   bool dv_is_used(device_support_dv && !user_dv_disable &&
     picture.hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION);
   bool hdr_is_used((picture.hdrType == StreamHdrType::HDR_TYPE_HLG || picture.color_transfer == AVCOL_TRC_SMPTE2084) &&
