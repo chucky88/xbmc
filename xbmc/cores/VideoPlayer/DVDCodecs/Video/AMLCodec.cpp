@@ -2059,6 +2059,7 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type, boo
 
     aml_dv_on(mode);
 
+    // For DV Content - enable DV now. (for VS10 enable later after codec setup)
     if (content_is_dv) {
       am_private->gcodec.dv_enable = 1;
       aml_dv_enable(); // enable Dolby Vision
@@ -2078,6 +2079,13 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type, boo
   } else if (aml_is_dv_enable()) {
     // do not want DV, and it is on - then switch it off for this content.
     aml_dv_off(true);
+  }
+
+  // Get and store the current DV graphic max, then reset to 0 (auto) for content playing.
+  CSysfsPath dolby_vision_graphic_max{"/sys/module/amdolby_vision/parameters/dolby_vision_graphic_max"};
+  if (dolby_vision_graphic_max.Exists()) {
+    m_dv_graphic_max = dolby_vision_graphic_max.Get<unsigned int>().value();
+    dolby_vision_graphic_max.Set(0);
   }
 
   // DEC_CONTROL_FLAG_DISABLE_FAST_POC
@@ -2230,7 +2238,7 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type, boo
   SetSpeed(m_speed);
   SetPollDevice(am_private->vcodec.cntl_handle);
 
-  // Finally enable Dolby Vision after other codec setup - to avoid lockup issues.
+  // For non-DV Content (i.e. VS10) - enable DV as final step after other codec setup - to avoid lockup issues.
   if (!content_is_dv && dv_on) aml_dv_enable();
 
   return true;
@@ -2367,10 +2375,11 @@ void CAMLCodec::CloseDecoder()
 
   CloseAmlVideo();
 
+  // Restore the DV graphic max
+  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_graphic_max", m_dv_graphic_max);
+	
   // Switch on DV - Incase VS10 is off for the content type.
-	if ((dv_mode == DV_MODE_ON) && !aml_is_dv_enable()) { 
-		aml_dv_on(DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL, true);
-  }
+  if ((dv_mode == DV_MODE_ON) && !aml_is_dv_enable()) aml_dv_on(DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL, true);
 }
 
 void CAMLCodec::CloseAmlVideo()
