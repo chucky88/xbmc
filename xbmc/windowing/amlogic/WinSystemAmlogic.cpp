@@ -152,9 +152,8 @@ bool CWinSystemAmlogic::InitWindowSystem()
   if (dolby_vision_graphic_max.Exists() && (dolby_vision_graphic_max.Get<unsigned int>().value() == 0))
     dolby_vision_graphic_max.Set(100);
 
-  // Turn on dv - if dv mode is on 
-  enum DV_MODE dv_mode(static_cast<DV_MODE>(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE)));
-  if (dv_mode == DV_MODE_ON) aml_dv_on(DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL, true);
+  // Turn on dv - if dv mode is on
+  aml_dv_start();
 
   if (((LINUX_VERSION_CODE >> 16) & 0xFF) < 5)
   {
@@ -204,16 +203,9 @@ void CWinSystemAmlogic::Announce(ANNOUNCEMENT::AnnouncementFlag flag,
               const std::string& message,
               const CVariant& data)
 {
-    if ((flag == ANNOUNCEMENT::System) && (message == "OnWake"))
-    {
-      // When Wake from Suspend re-trigger DV if in DV_MODE_ON
-      const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
-      enum DV_MODE dv_mode(static_cast<DV_MODE>(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE)));
-      if (dv_mode == DV_MODE_ON) {
-        aml_dv_off(true);
-        aml_dv_on(DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL, true);
-      }
-    }
+  // When Wake from Suspend re-trigger DV if in DV_MODE_ON
+  if ((flag == ANNOUNCEMENT::System) && (message == "OnWake"))
+    aml_dv_start();
 }
 
 bool CWinSystemAmlogic::DestroyWindowSystem()

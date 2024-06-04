@@ -88,6 +88,7 @@ void aml_dv_enable();
 void aml_dv_disable();
 bool aml_is_dv_enable();
 void aml_dv_display_trigger();
+void aml_dv_start();
 bool aml_has_frac_rate_policy();
 bool aml_video_started();
 void aml_video_mute(bool mute);

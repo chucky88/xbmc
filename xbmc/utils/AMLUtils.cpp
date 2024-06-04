@@ -352,6 +352,16 @@ void aml_dv_display_trigger()
   }
 }
 
+void aml_dv_start()
+{
+  const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+  enum DV_MODE dv_mode(static_cast<DV_MODE>(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE)));
+  if (dv_mode == DV_MODE_ON) {
+    aml_dv_off(true);
+    aml_dv_on(DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL, true);
+  }
+}
+
 bool aml_has_frac_rate_policy()
 {
   static int has_frac_rate_policy = -1;
