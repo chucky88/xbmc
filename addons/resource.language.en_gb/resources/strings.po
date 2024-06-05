@@ -24710,89 +24710,101 @@ msgstr ""
 #. "Dolby Vision VS10"
 #: system/settings/settings.xml
 msgctxt "#50051"
-msgid "For SDR"
+msgid "For SDR8"
 msgstr ""
 
 #. "Dolby Vision VS10"
 #: system/settings/settings.xml
 msgctxt "#50052"
-msgid "Dolby Vision VS10 target mode for SDR content."
+msgid "Dolby Vision VS10 target mode for SDR8 content."
 msgstr ""
 
 #. "Dolby Vision VS10"
 #: system/settings/settings.xml
 msgctxt "#50053"
-msgid "For HDR10"
+msgid "For SDR10"
 msgstr ""
 
 #. "Dolby Vision VS10"
 #: system/settings/settings.xml
 msgctxt "#50054"
-msgid "Dolby Vision VS10 target mode for HDR10 content."
+msgid "Dolby Vision VS10 target mode for SDR10 content."
 msgstr ""
 
 #. "Dolby Vision VS10"
 #: system/settings/settings.xml
 msgctxt "#50055"
-msgid "For HDR10+ (HDR10 data only)"
+msgid "For HDR10"
 msgstr ""
 
 #. "Dolby Vision VS10"
 #: system/settings/settings.xml
 msgctxt "#50056"
-msgid "Dolby Vision VS10 target mode for HDR10+ content (does not use the HDR10+ dynamic metadata)."
+msgid "Dolby Vision VS10 target mode for HDR10 content."
 msgstr ""
 
 #. "Dolby Vision VS10"
 #: system/settings/settings.xml
 msgctxt "#50057"
-msgid "For HLG HDR"
+msgid "For HDR10+ (HDR10 data only)"
 msgstr ""
 
 #. "Dolby Vision VS10"
 #: system/settings/settings.xml
 msgctxt "#50058"
-msgid "Dolby Vision VS10 target mode for HLG HDR content."
+msgid "Dolby Vision VS10 target mode for HDR10+ content (does not use the HDR10+ dynamic metadata)."
 msgstr ""
 
 #. "Dolby Vision VS10"
 #: system/settings/settings.xml
 msgctxt "#50059"
-msgid "For Dolby Vision"
+msgid "For HLG HDR"
 msgstr ""
 
 #. "Dolby Vision VS10"
 #: system/settings/settings.xml
 msgctxt "#50060"
-msgid "Dolby Vision VS10 target mode for Dolby Vision."
+msgid "Dolby Vision VS10 target mode for HLG HDR content."
 msgstr ""
 
 #. "Dolby Vision VS10"
 #: system/settings/settings.xml
 msgctxt "#50061"
-msgid "off"
+msgid "For Dolby Vision"
 msgstr ""
 
 #. "Dolby Vision VS10"
 #: system/settings/settings.xml
 msgctxt "#50062"
+msgid "Dolby Vision VS10 target mode for Dolby Vision."
+msgstr ""
+
+#. "Dolby Vision VS10"
+#: system/settings/settings.xml
+msgctxt "#50063"
+msgid "off"
+msgstr ""
+
+#. "Dolby Vision VS10"
+#: system/settings/settings.xml
+msgctxt "#50064"
 msgid "SDR8"
 msgstr ""
 
 #. "Dolby Vision VS10" 
 #: system/settings/settings.xml
-msgctxt "#50063"
+msgctxt "#50065"
 msgid "SDR10"
 msgstr ""
 
 #. "Dolby Vision VS10" 
 #: system/settings/settings.xml
-msgctxt "#50064"
+msgctxt "#50066"
 msgid "HDR10"
 msgstr ""
 
 #. "Dolby Vision VS10" 
 #: system/settings/settings.xml
-msgctxt "#50065"
+msgctxt "#50067"
 msgid "Dolby Vision"
 msgstr ""
