@@ -250,7 +250,8 @@ bool aml_support_dolby_vision()
 bool aml_dolby_vision_enabled()
 {
   static int dv_enabled = -1;
-  bool dv_user_enabled(CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE) != 2);
+  bool dv_user_enabled(CServiceBroker::GetSettingsComponent()->GetSettings()
+                       ->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE) != DV_MODE_OFF);
 
   if (dv_enabled == -1)
     dv_enabled = (!!aml_support_dolby_vision());
