@@ -67,4 +67,5 @@ protected:
   bool m_support_std_dv;
   bool m_support_ll_dv;
   bool m_support_hdr_dv;
+  bool m_support_dv;
 };
