@@ -2040,6 +2040,9 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type, boo
   // dv mode on or on demand and this is dv/vs10.
   bool dv_on((dv_mode == DV_MODE_ON || dv_mode == DV_MODE_ON_DEMAND) && dv_request);
   CLog::Log(LOGDEBUG, "CAMLCodec::OpenDecoder DV mode [{}],  DV type [{}], DV on [{}]", dv_mode, dv_type, dv_on);
+
+  // If DV Mode ON in Kodi Menu, then Set graphics max to 0 (auto - i.e. do lookup in AMLogic side) record current OSD max for Kodi menu to restore later.
+  if (dv_mode == DV_MODE_ON) m_dv_osd_max = aml_dv_osd_max(0);
   
   if (dv_on)
   {
@@ -2083,13 +2086,6 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type, boo
   } else if (aml_is_dv_enable()) {
     // do not want DV, and it is on - then switch it off for this content.
     aml_dv_off(true);
-  }
-
-  // Get and store the current DV graphic max, then reset to 0 (auto) for content playing.
-  CSysfsPath dolby_vision_graphic_max{"/sys/module/amdolby_vision/parameters/dolby_vision_graphic_max"};
-  if (dolby_vision_graphic_max.Exists()) {
-    m_dv_graphic_max = dolby_vision_graphic_max.Get<unsigned int>().value();
-    dolby_vision_graphic_max.Set(0);
   }
 
   // DEC_CONTROL_FLAG_DISABLE_FAST_POC
@@ -2338,10 +2334,10 @@ void CAMLCodec::CloseDecoder()
 {
   CLog::Log(LOGDEBUG, "CAMLCodec::CloseDecoder");
 
-	const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
-	enum DV_MODE dv_mode(static_cast<DV_MODE>(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE)));
+  const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
+  enum DV_MODE dv_mode(static_cast<DV_MODE>(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE)));
 
-	if ((dv_mode == DV_MODE_ON_DEMAND) && aml_is_dv_enable()) aml_dv_off(false);
+  if ((dv_mode == DV_MODE_ON_DEMAND) && aml_is_dv_enable()) aml_dv_off(false);
 
   SetPollDevice(-1);
 
@@ -2379,9 +2375,9 @@ void CAMLCodec::CloseDecoder()
 
   CloseAmlVideo();
 
-  // Restore the DV graphic max
-  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_graphic_max", m_dv_graphic_max);
-	
+  // If DV Mode ON in Kodi Menu, then restore the DV osd max.
+  if (dv_mode == DV_MODE_ON) aml_dv_set_osd_max(m_dv_osd_max);
+
   // Switch on DV - Incase VS10 is off for the content type.
   if ((dv_mode == DV_MODE_ON) && !aml_is_dv_enable()) aml_dv_on(DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL, true);
 }
