@@ -51,15 +51,15 @@ void SettingOptionsDolbyVisionTypeFiller(
     int& current,
     void* data)
 {
-  list.clear();
 
-  if (aml_display_support_dv())
-    list.emplace_back(g_localizeStrings.Get(50023), DV_TYPE_DISPLAY_LED); // Display Led (DV-Std)
-  
-  if (aml_dv_support_ll())
-    list.emplace_back(g_localizeStrings.Get(50024), DV_TYPE_PLAYER_LED_LLDV); // Player Led (DV-LL)
-
-  list.emplace_back(g_localizeStrings.Get(50025), DV_TYPE_PLAYER_LED_HDR); // Player Led (HDR)
+  // Resolve DV type once only - for the case where the display is not dv capable and a dv_info is injected this will allow options that will not work.
+  if (!m_dv_type_resolved) {      
+    list.clear();    
+    if (aml_display_support_dv()) list.emplace_back(g_localizeStrings.Get(50023), DV_TYPE_DISPLAY_LED); 
+    if (aml_dv_support_ll()) list.emplace_back(g_localizeStrings.Get(50024), DV_TYPE_PLAYER_LED_LLDV);
+    list.emplace_back(g_localizeStrings.Get(50025), DV_TYPE_PLAYER_LED_HDR); 
+    m_dv_type_resolved = true;
+  }
 }
 
 CWinSystemAmlogic::CWinSystemAmlogic()
