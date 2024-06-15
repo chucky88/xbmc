@@ -151,7 +151,7 @@ void CDolbyVisionAML::OnSettingChanged(const std::shared_ptr<const CSetting>& se
   const std::string& settingId = setting->GetId();
   if (settingId == CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE) 
   {
-    // Not working - needs video playback for mode switch to work correctly in all cases.
+    // Not working for some cases - needs video playback for mode switch to work correctly everytime.
     /*
     enum DV_MODE dv_mode(static_cast<DV_MODE>(std::dynamic_pointer_cast<const CSettingInt>(setting)->GetValue()));
     if (dv_mode == DV_MODE_ON) 
@@ -167,7 +167,7 @@ void CDolbyVisionAML::OnSettingChanged(const std::shared_ptr<const CSetting>& se
   }
   else if (settingId == CSettings::SETTING_COREELEC_AMLOGIC_DV_TYPE)
   {
-    // Not working - needs video playback for mode switch to work correctly in all cases.
+    // Not working for some cases - needs video playback for mode switch to work correctly everytime.
     /*
     const auto settings = CServiceBroker::GetSettingsComponent()->GetSettings();
     enum DV_MODE dv_mode(static_cast<DV_MODE>(settings->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE)));

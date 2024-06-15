@@ -353,7 +353,7 @@ void aml_dv_set_osd_max(int max)
 
 void aml_dv_reset_osd_max()
 {
-  enum int max(settings()->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE_ON_LUMINANCE)));
+  int max(settings()->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE_ON_LUMINANCE));
   aml_dv_set_osd_max(max);
 }
 
@@ -397,12 +397,12 @@ void aml_dv_always_update_reg()
 
 enum DV_MODE aml_dv_mode()
 {
-  enum DV_MODE dv_mode(static_cast<DV_MODE>(settings()->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE)));
+  return static_cast<DV_MODE>(settings()->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_MODE));
 }
 
 enum DV_TYPE aml_dv_type()
 {
-  enum DV_TYPE dv_type(static_cast<DV_TYPE>(settings()->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_TYPE)));
+  return static_cast<DV_TYPE>(settings()->GetInt(CSettings::SETTING_COREELEC_AMLOGIC_DV_TYPE));
 }
 
 unsigned int aml_vs10_by_setting(const std::string setting)
