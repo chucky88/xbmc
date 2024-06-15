@@ -2034,7 +2034,8 @@ bool CAMLCodec::OpenDecoder(CDVDStreamInfo &hints, enum ELType dovi_el_type)
         aml_dv_enable(); // enable Dolby Vision
       }
 
-      if ((hints.dovi.dv_profile == 4 || hints.dovi.dv_profile == 7) && settings->GetInt(CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI) == 0)
+      if ((hints.dovi.dv_profile == 4 || hints.dovi.dv_profile == 7) && CServiceBroker::GetSettingsComponent()->GetSettings()->GetInt(
+          CSettings::SETTING_VIDEOPLAYER_CONVERTDOVI) == 0)
       {
         if (dovi_el_type != ELType::TYPE_MEL) // use stream path if not MEL
         {
