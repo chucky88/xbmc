@@ -334,8 +334,8 @@ void aml_dv_off()
   if (dolby_vision_target_mode.Exists())
   {
     std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
-    while(dolby_vision_target_mode.Get<unsigned int>().value() != DOLBY_VISION_OUTPUT_MODE_BYPASS && 
-          (std::chrono::system_clock::now() - now) < std::chrono::seconds(3))
+    while((dolby_vision_target_mode.Get<unsigned int>().value() != DOLBY_VISION_OUTPUT_MODE_BYPASS) && 
+          ((std::chrono::system_clock::now() - now) < std::chrono::seconds(3)))
       usleep(10000); // wait 10ms
   }
   aml_dv_toggle_frame();
@@ -381,8 +381,14 @@ void aml_dv_display_trigger()
 void aml_dv_toggle_frame()
 {
   CSysfsPath dolby_vision_flags{"/sys/module/amdolby_vision/parameters/dolby_vision_flags"};
-  if (dolby_vision_flags.Exists())
+  if (dolby_vision_flags.Exists()) 
+  {
     dolby_vision_flags.Set(dolby_vision_flags.Get<unsigned int>().value() | FLAG_TOGGLE_FRAME);
+    std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
+    while(((dolby_vision_flags.Get<unsigned int>().value() & FLAG_TOGGLE_FRAME) == FLAG_TOGGLE_FRAME) && 
+          ((std::chrono::system_clock::now() - now) < std::chrono::seconds(3)))
+      usleep(10000); // wait 10ms
+  }
 }
 
 void aml_dv_start()
