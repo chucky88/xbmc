@@ -275,7 +275,7 @@ bool aml_dolby_vision_enabled()
   return ((dv_enabled && !!dv_user_enabled) == 1);
 }
 
-void aml_dv_on(unsigned int mode, bool enable)
+void aml_dv_on(unsigned int mode)
 {
   enum DV_TYPE dv_type(aml_dv_type());
 
@@ -319,7 +319,8 @@ void aml_dv_on(unsigned int mode, bool enable)
   CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_mode", mode);
   CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_policy", DOLBY_VISION_FORCE_OUTPUT_MODE);
 
-  if (enable) aml_dv_enable();
+  aml_dv_toggle_frame();
+  aml_dv_enable();
 }
 
 void aml_dv_off()
@@ -340,6 +341,51 @@ void aml_dv_off()
   }
   aml_dv_toggle_frame();
   aml_dv_disable();
+}
+
+void aml_dv_open(StreamHdrType hdrType, unsigned int bitDepth)
+{
+  enum DV_MODE dv_mode(aml_dv_mode());
+  CLog::Log(LOGDEBUG, "AMLUtils::{} - Checking DV for DV mode: [{}], DV type: [{}]", __FUNCTION__, dv_mode, aml_dv_type());
+  if (dv_mode == DV_MODE_ON || dv_mode == DV_MODE_ON_DEMAND) {
+
+    unsigned int vs10_mode = aml_vs10_by_hdrtype(hdrType, bitdepth);    
+
+    if (vs10_mode != DOLBY_VISION_OUTPUT_MODE_BYPASS) 
+      aml_dv_on(vs10_mode);
+    else if (aml_is_dv_enable()) // DV BYPASS, and it is on - then switch it off.
+      aml_dv_off(); 
+
+    bool content_is_dv(hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION);
+    CLog::Log(LOGDEBUG, "AMLUtils::{} - DV is [{}], requested with vs10 mode: [{}], set for: [{}]",  __FUNCTION__, aml_is_dv_enable(), vs10_mode, content_is_dv ? "content" : "mapping");
+}
+
+void aml_dv_close()
+{
+  // disable Dolby Vision driver
+  if (aml_is_dv_enable())
+  {
+    CSysfsPath dv_video_on{"/sys/class/amdolby_vision/dv_video_on"};
+    if (dv_video_on.Exists())
+    {
+      std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
+      while(dv_video_on.Get<int>().value() == 1 && (std::chrono::system_clock::now() - now) < std::chrono::seconds(m_decoder_timeout))
+        usleep(10000); // wait 10ms
+    }
+    if (aml_dv_mode() == DV_MODE_ON_DEMAND) aml_dv_off();
+  }
+  
+  // If DV Mode ON in Kodi Menu.
+  if (aml_dv_mode() == DV_MODE_ON) {
+    aml_dv_reset_osd_max(); // Reset the max luminance for menu.      
+    if (!aml_is_dv_enable()) aml_dv_on(DOLBY_VISION_OUTPUT_MODE_IPT); // Switch on DV - Incase VS10 is off for the content type.
+  }
+}
+
+unsigned int aml_vs10_mode()
+{
+  CSysfsPath dolby_vision_mode{"/sys/module/amdolby_vision/parameters/dolby_vision_mode"};
+  return dolby_vision_mode.Exists() ? dolby_vision_mode.Get<unsigned int>().value() : DOLBY_VISION_OUTPUT_MODE_BYPASS;
 }
 
 void aml_dv_set_osd_max(int max)
@@ -395,10 +441,9 @@ void aml_dv_start()
 {
   if (aml_dv_mode() == DV_MODE_ON) {
     aml_dv_reset_osd_max();
-    aml_dv_on(DOLBY_VISION_OUTPUT_MODE_IPT, true);
+    aml_dv_on(DOLBY_VISION_OUTPUT_MODE_IPT);
   }
 }
-
 
 enum DV_MODE aml_dv_mode()
 {
