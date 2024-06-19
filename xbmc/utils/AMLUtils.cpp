@@ -399,10 +399,6 @@ void aml_dv_start()
   }
 }
 
-void aml_dv_always_update_reg()
-{
-  CSysfsPath("/sys/module/amdolby_vision/parameters/force_update_reg", 31);
-}
 
 enum DV_MODE aml_dv_mode()
 {

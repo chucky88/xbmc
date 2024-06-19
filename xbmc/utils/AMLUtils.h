@@ -112,7 +112,6 @@ bool aml_is_dv_enable();
 void aml_dv_display_trigger();
 void aml_dv_toggle_frame();
 void aml_dv_start();
-void aml_dv_always_update_reg();
 unsigned int aml_vs10_by_setting(const std::string setting);
 unsigned int aml_vs10_by_hdrtype(StreamHdrType hdrType, unsigned int bitDepth);
 enum DV_MODE aml_dv_mode();

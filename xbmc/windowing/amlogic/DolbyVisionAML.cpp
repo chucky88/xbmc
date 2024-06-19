@@ -133,9 +133,6 @@ bool CDolbyVisionAML::Setup()
   auto announcer = CServiceBroker::GetAnnouncementManager();
   announcer->AddAnnouncer(this);
 
-  // Always update (reset) the reg and lut on mode changes.
-  aml_dv_always_update_reg();
-
   // Turn on dv - if dv mode is on, limit the menu lumincance as menu now can be in DV/HDR. 
   aml_dv_start();
 
