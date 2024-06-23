@@ -15,6 +15,10 @@
 #include <regex>
 
 #include "AMLUtils.h"
+
+#include "application/Application.h"
+#include "application/ApplicationComponents.h"
+#include "application/ApplicationPlayer.h"
 #include "utils/log.h"
 #include "utils/StringUtils.h"
 #include "windowing/GraphicContext.h"
@@ -78,10 +82,19 @@ static void aml_dv_toggle_frame()
   if (dolby_vision_flags.Exists()) 
   {
     dolby_vision_flags.Set(dolby_vision_flags.Get<unsigned int>().value() | FLAG_TOGGLE_FRAME);
-    std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
-    while(((dolby_vision_flags.Get<unsigned int>().value() & FLAG_TOGGLE_FRAME) == FLAG_TOGGLE_FRAME) && 
-          ((std::chrono::system_clock::now() - now) < std::chrono::seconds(3)))
-      usleep(10000); // wait 10ms
+    auto now(std::chrono::system_clock::now());
+    while(true) { 
+      auto elapsed_ms(std::chrono::system_clock::now() - now);
+      if (!(dolby_vision_flags.Get<unsigned int>().value() & FLAG_TOGGLE_FRAME)) {
+        CLog::Log(LOGINFO, "AMLUtils::{} - Toggle Frame in [{}ms]", std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_ms).count());
+        break;
+      } else if (elapsed_ms >= std::chrono::milliseconds(200)) {
+        CLog::Log(LOGINFO, "AMLUtils::{} - Toggle Frame wait time elapsed",  __FUNCTION__);
+        break;
+      } else {
+        usleep(10000); // wait 10ms
+      }
+    }
   }
 }
 
@@ -379,27 +392,15 @@ void aml_dv_on(unsigned int mode)
 
   CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_mode", mode);
   CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_policy", DOLBY_VISION_FORCE_OUTPUT_MODE);
-
   aml_dv_toggle_frame();
   aml_dv_enable();
 }
 
 void aml_dv_off()
 {
-  // Reset DV Paremters - will do mode change.
   CSysfsPath("/sys/class/amdolby_vision/debug", "enable_fel 0");
   CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_mode", DOLBY_VISION_OUTPUT_MODE_BYPASS);
   CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_policy", DOLBY_VISION_FOLLOW_SOURCE);
-  
-  // Wait for mode change, set toogle frame and then disable.
-  CSysfsPath dolby_vision_target_mode{"/sys/module/amdolby_vision/parameters/dolby_vision_target_mode"};
-  if (dolby_vision_target_mode.Exists())
-  {
-    std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
-    while((dolby_vision_target_mode.Get<unsigned int>().value() != DOLBY_VISION_OUTPUT_MODE_BYPASS) && 
-          ((std::chrono::system_clock::now() - now) < std::chrono::seconds(3)))
-      usleep(10000); // wait 10ms
-  }
   aml_dv_toggle_frame();
   aml_dv_disable();
 }
@@ -420,6 +421,14 @@ void aml_dv_open(StreamHdrType hdrType, unsigned int bitDepth)
     bool content_is_dv(hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION);
     CLog::Log(LOGDEBUG, "AMLUtils::{} - DV is [{}], requested with vs10 mode: [{}], set for: [{}]",  __FUNCTION__, aml_is_dv_enable(), vs10_mode, content_is_dv ? "content" : "mapping");
   }
+
+  // Re-trigger update resolution, so Dolby VSIF gets picked up in logic in kernel.
+  auto& components = CServiceBroker::GetAppComponents();
+  const auto appPlayer = components.GetComponent<CApplicationPlayer>();
+  appPlayer->TriggerUpdateResolution();
+
+    // if DV_MODE_ON (i.e. on in Kodi Menu), then set graphics max to 0 (OSD luminance will be handled by amlogic).
+  if (dv_mode == DV_MODE_ON) aml_dv_set_osd_max(0);
 }
 
 void aml_dv_close()
@@ -430,18 +439,24 @@ void aml_dv_close()
     CSysfsPath dv_video_on{"/sys/class/amdolby_vision/dv_video_on"};
     if (dv_video_on.Exists())
     {
-      std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
-      while((dv_video_on.Get<int>().value() == 1) && ((std::chrono::system_clock::now() - now) < std::chrono::seconds(3)))
-        usleep(10000); // wait 10ms
+      auto now(std::chrono::system_clock::now());
+      while(true) { 
+        auto elapsed_ms(std::chrono::system_clock::now() - now);
+        if (!(dv_video_on.Get<int>().value())) {
+          CLog::Log(LOGINFO, "AMLUtils::{} - Video Off in [{}ms]", std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_ms).count());
+          break;
+        } else if (elapsed_ms >= std::chrono::milliseconds(200)) {
+          CLog::Log(LOGINFO, "AMLUtils::{} - Video Off wait time elapsed",  __FUNCTION__);
+          break;
+        } else {
+          usleep(10000); // wait 10ms
+        }
+      }
     }
     if (aml_dv_mode() == DV_MODE_ON_DEMAND) aml_dv_off();
   }
-  
-  // If DV Mode ON in Kodi Menu.
-  if (aml_dv_mode() == DV_MODE_ON) {
-    aml_dv_reset_osd_max(); // Reset the max luminance for menu.      
-    if (!aml_is_dv_enable()) aml_dv_on(DOLBY_VISION_OUTPUT_MODE_IPT); // Switch on DV - Incase VS10 is off for the content type.
-  }
+
+  aml_dv_start(); // If DV Mode ON in Kodi Menu.
 }
 
 void aml_dv_set_osd_max(int max)
