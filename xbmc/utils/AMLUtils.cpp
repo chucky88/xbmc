@@ -66,34 +66,29 @@ static void aml_dv_reset_osd_max()
   aml_dv_set_osd_max(max);
 }
 
-static void aml_dv_enable()
+static void aml_dv_set_toggle_frame()
 {
-  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_enable", "Y");
+  CSysfsPath dolby_vision_flags{"/sys/module/amdolby_vision/parameters/dolby_vision_flags"};
+  if (dolby_vision_flags.Exists()) dolby_vision_flags.Set(dolby_vision_flags.Get<unsigned int>().value() | FLAG_TOGGLE_FRAME);
 }
 
-static void aml_dv_disable()
-{
-  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_enable", "N");
-}
-
-static void aml_dv_toggle_frame()
+static void aml_dv_check_toggle_frame()
 {
   CSysfsPath dolby_vision_flags{"/sys/module/amdolby_vision/parameters/dolby_vision_flags"};
   if (dolby_vision_flags.Exists()) 
   {
-    dolby_vision_flags.Set(dolby_vision_flags.Get<unsigned int>().value() | FLAG_TOGGLE_FRAME);
-    auto now(std::chrono::system_clock::now());
+    CLog::Log(LOGINFO, "AMLUtils::{} - Toggle Frame start",  __FUNCTION__);
+    std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
     while(true) { 
-      auto elapsed_ms(std::chrono::system_clock::now() - now);
-      if (!(dolby_vision_flags.Get<unsigned int>().value() & FLAG_TOGGLE_FRAME)) {
-        CLog::Log(LOGINFO, "AMLUtils::{} - Toggle Frame in [{}ms]", std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_ms).count());
+      if (!((dolby_vision_flags.Get<unsigned int>().value() & FLAG_TOGGLE_FRAME) == FLAG_TOGGLE_FRAME)) {
+        CLog::Log(LOGINFO, "AMLUtils::{} - Toggle Frame done", __FUNCTION__);
         break;
-      } else if (elapsed_ms >= std::chrono::milliseconds(200)) {
+      }
+      if (!((std::chrono::system_clock::now() - now) < std::chrono::milliseconds(200))) {
         CLog::Log(LOGINFO, "AMLUtils::{} - Toggle Frame wait time elapsed",  __FUNCTION__);
         break;
-      } else {
-        usleep(10000); // wait 10ms
-      }
+      } 
+      usleep(10000); // wait 10ms
     }
   }
 }
@@ -390,19 +385,21 @@ void aml_dv_on(unsigned int mode)
   if ((mode == DOLBY_VISION_OUTPUT_MODE_IPT) && (dv_type == DV_TYPE_DISPLAY_LED)) 
     mode = DOLBY_VISION_OUTPUT_MODE_IPT_TUNNEL;
 
+  aml_dv_set_toggle_frame();
   CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_mode", mode);
-  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_policy", DOLBY_VISION_FORCE_OUTPUT_MODE);
-  aml_dv_toggle_frame();
-  aml_dv_enable();
+  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_policy", DOLBY_VISION_FORCE_OUTPUT_MODE);  
+  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_enable", "Y");
+  aml_dv_check_toggle_frame();
 }
 
 void aml_dv_off()
 {
   CSysfsPath("/sys/class/amdolby_vision/debug", "enable_fel 0");
+  aml_dv_set_toggle_frame();
   CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_mode", DOLBY_VISION_OUTPUT_MODE_BYPASS);
-  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_policy", DOLBY_VISION_FOLLOW_SOURCE);
-  aml_dv_toggle_frame();
-  aml_dv_disable();
+  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_policy", DOLBY_VISION_FOLLOW_SOURCE);  
+  CSysfsPath("/sys/module/amdolby_vision/parameters/dolby_vision_enable", "N");
+  aml_dv_check_toggle_frame();
 }
 
 void aml_dv_open(StreamHdrType hdrType, unsigned int bitDepth)
@@ -439,18 +436,25 @@ void aml_dv_close()
     CSysfsPath dv_video_on{"/sys/class/amdolby_vision/dv_video_on"};
     if (dv_video_on.Exists())
     {
-      auto now(std::chrono::system_clock::now());
+      /*
+      std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
+      while((dv_video_on.Get<int>().value()) && 
+            ((std::chrono::system_clock::now() - now) < std::chrono::milliseconds(200)))
+        usleep(10000); // wait 10ms
+      */
+      
+      CLog::Log(LOGINFO, "AMLUtils::{} - DV Video Off start",  __FUNCTION__);
+      std::chrono::time_point<std::chrono::system_clock> now(std::chrono::system_clock::now());
       while(true) { 
-        auto elapsed_ms(std::chrono::system_clock::now() - now);
         if (!(dv_video_on.Get<int>().value())) {
-          CLog::Log(LOGINFO, "AMLUtils::{} - Video Off in [{}ms]", std::chrono::duration_cast<std::chrono::milliseconds>(elapsed_ms).count());
+          CLog::Log(LOGINFO, "AMLUtils::{} - DV Video Off done", __FUNCTION__);
           break;
-        } else if (elapsed_ms >= std::chrono::milliseconds(200)) {
-          CLog::Log(LOGINFO, "AMLUtils::{} - Video Off wait time elapsed",  __FUNCTION__);
-          break;
-        } else {
-          usleep(10000); // wait 10ms
         }
+        if (!((std::chrono::system_clock::now() - now) < std::chrono::milliseconds(200))) {
+          CLog::Log(LOGINFO, "AMLUtils::{} - DV Video Off wait time elapsed",  __FUNCTION__);
+          break;
+        } 
+        usleep(10000); // wait 10ms
       }
     }
     if (aml_dv_mode() == DV_MODE_ON_DEMAND) aml_dv_off();
