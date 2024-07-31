@@ -226,7 +226,7 @@ bool aml_display_support_dv_std()
   return support_std;
 }
 
-static bool aml_display_support_dv()
+bool aml_display_support_dv()
 {
   int support_dv = 0;
   CRegExp regexp;
